@@ -17,8 +17,8 @@ from telegram.ext import (
 )
 from flask import Flask, request, jsonify
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID   = os.getenv("CHAT_ID")
+BOT_TOKEN = os.getenv("8131354275:AAHAf30Nlsk4NBea_M9in5CdUpn2HjH0hWA")
+CHAT_ID   = os.getenv("8131354275")
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)

@@ -16,6 +16,7 @@ from telegram.ext import (
     ContextTypes, filters,
 )
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 BOT_TOKEN = (os.getenv("BOT_TOKEN") or "").strip()
 CHAT_ID   = (os.getenv("CHAT_ID") or "").strip()
@@ -388,6 +389,7 @@ async def handle_other(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─── WEB SERVER: receives round data directly from the tournament app ───────
 
 flask_app = Flask(__name__)
+CORS(flask_app)
 
 @flask_app.route("/generate-round", methods=["POST"])
 def generate_round():

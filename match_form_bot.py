@@ -303,23 +303,48 @@ async def send_match_forms_auto(matches, round_num, time_start, event_name):
     fmt       = "Swiss-System"
 
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(
+    status_msg = await bot.send_message(
         chat_id=CHAT_ID,
         text=f"⏳ Generating match forms for {event_name} - Round {round_num}...",
     )
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output_path = os.path.join(tmpdir, "match_forms.pdf")
-        await generate_pdf_playwright(
-            matches, round_num, time_start, event_name, play_type, fmt, output_path
-        )
-        with open(output_path, "rb") as f:
-            await bot.send_document(
-                chat_id=CHAT_ID,
-                document=f,
-                filename=f"MatchForms_{event_name}_Round{round_num}.pdf",
-                caption=f"{event_name} - Round {round_num} | Time: {time_start} | {len(matches)} forms | Auto-generated",
+    async def animate_status():
+        dots_cycle = ["", ".", "..", "..."]
+        i = 0
+        while True:
+            await asyncio.sleep(1)
+            i = (i + 1) % len(dots_cycle)
+            try:
+                await bot.edit_message_text(
+                    chat_id=CHAT_ID,
+                    message_id=status_msg.message_id,
+                    text=f"⏳ Generating match forms for {event_name} - Round {round_num}{dots_cycle[i]}",
+                )
+            except Exception:
+                pass
+
+    animation_task = asyncio.create_task(animate_status())
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "match_forms.pdf")
+            await generate_pdf_playwright(
+                matches, round_num, time_start, event_name, play_type, fmt, output_path
             )
+            animation_task.cancel()
+            try:
+                await bot.delete_message(chat_id=CHAT_ID, message_id=status_msg.message_id)
+            except Exception:
+                pass
+            with open(output_path, "rb") as f:
+                await bot.send_document(
+                    chat_id=CHAT_ID,
+                    document=f,
+                    filename=f"MatchForms_{event_name}_Round{round_num}.pdf",
+                    caption=f"{event_name} - Round {round_num} | Time: {time_start} | {len(matches)} forms | Auto-generated",
+                )
+    finally:
+        animation_task.cancel()
 
 
 # ─── TELEGRAM HANDLERS ────────────────────────────────────────────────────────

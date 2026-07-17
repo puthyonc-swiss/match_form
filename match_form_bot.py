@@ -302,12 +302,17 @@ async def send_match_forms_auto(matches, round_num, time_start, event_name):
     play_type = "3 vs 3"
     fmt       = "Swiss-System"
 
+    bot = Bot(token=BOT_TOKEN)
+    await bot.send_message(
+        chat_id=CHAT_ID,
+        text=f"⏳ Generating match forms for {event_name} - Round {round_num}...",
+    )
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "match_forms.pdf")
         await generate_pdf_playwright(
             matches, round_num, time_start, event_name, play_type, fmt, output_path
         )
-        bot = Bot(token=BOT_TOKEN)
         with open(output_path, "rb") as f:
             await bot.send_document(
                 chat_id=CHAT_ID,

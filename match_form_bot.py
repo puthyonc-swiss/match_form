@@ -284,6 +284,7 @@ async def generate_pdf_playwright(matches, round_num, time_start, event_name, pl
         browser = await p.chromium.launch()
         page    = await browser.new_page()
         await page.set_content(html_content, wait_until="networkidle")
+        await page.evaluate("document.fonts.ready")
         await page.pdf(
             path=output_path,
             width="210mm",

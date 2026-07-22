@@ -20,6 +20,7 @@ from flask_cors import CORS
 
 BOT_TOKEN = (os.getenv("BOT_TOKEN") or "").strip()
 CHAT_ID   = (os.getenv("CHAT_ID") or "").strip()
+CHAT_IDS  = [c.strip() for c in CHAT_ID.split(",") if c.strip()]
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -298,15 +299,17 @@ async def generate_pdf_playwright(matches, round_num, time_start, event_name, pl
 # ─── AUTO MODE: called by the Cloud Function, skips Telegram upload/buttons ──
 
 async def send_match_forms_auto(matches, round_num, time_start, event_name):
-    """Build match forms with fixed Play Type/Format and send to CHAT_ID."""
+    """Build match forms with fixed Play Type/Format and send to every chat in CHAT_IDS."""
     play_type = "3 vs 3"
     fmt       = "Swiss-System"
 
     bot = Bot(token=BOT_TOKEN)
-    status_msg = await bot.send_message(
-        chat_id=CHAT_ID,
-        text=f"⏳ Generating match forms for {event_name} - Round {round_num}...",
-    )
+    status_msgs = {}
+    for cid in CHAT_IDS:
+        status_msgs[cid] = await bot.send_message(
+            chat_id=cid,
+            text=f"⏳ Generating match forms for {event_name} - Round {round_num}...",
+        )
 
     async def animate_status():
         dots_cycle = ["", ".", "..", "..."]
@@ -314,14 +317,15 @@ async def send_match_forms_auto(matches, round_num, time_start, event_name):
         while True:
             await asyncio.sleep(1)
             i = (i + 1) % len(dots_cycle)
-            try:
-                await bot.edit_message_text(
-                    chat_id=CHAT_ID,
-                    message_id=status_msg.message_id,
-                    text=f"⏳ Generating match forms for {event_name} - Round {round_num}{dots_cycle[i]}",
-                )
-            except Exception:
-                pass
+            for cid, msg in status_msgs.items():
+                try:
+                    await bot.edit_message_text(
+                        chat_id=cid,
+                        message_id=msg.message_id,
+                        text=f"⏳ Generating match forms for {event_name} - Round {round_num}{dots_cycle[i]}",
+                    )
+                except Exception:
+                    pass
 
     animation_task = asyncio.create_task(animate_status())
 
@@ -332,17 +336,19 @@ async def send_match_forms_auto(matches, round_num, time_start, event_name):
                 matches, round_num, time_start, event_name, play_type, fmt, output_path
             )
             animation_task.cancel()
-            try:
-                await bot.delete_message(chat_id=CHAT_ID, message_id=status_msg.message_id)
-            except Exception:
-                pass
-            with open(output_path, "rb") as f:
-                await bot.send_document(
-                    chat_id=CHAT_ID,
-                    document=f,
-                    filename=f"MatchForms_{event_name}_Round{round_num}.pdf",
-                    caption=f"{event_name} - Round {round_num} | Time: {time_start} | {len(matches)} forms | Auto-generated",
-                )
+            for cid, msg in status_msgs.items():
+                try:
+                    await bot.delete_message(chat_id=cid, message_id=msg.message_id)
+                except Exception:
+                    pass
+            for cid in CHAT_IDS:
+                with open(output_path, "rb") as f:
+                    await bot.send_document(
+                        chat_id=cid,
+                        document=f,
+                        filename=f"MatchForms_{event_name}_Round{round_num}.pdf",
+                        caption=f"{event_name} - Round {round_num} | Time: {time_start} | {len(matches)} forms | Auto-generated",
+                    )
     finally:
         animation_task.cancel()
 

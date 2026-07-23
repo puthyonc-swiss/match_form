@@ -158,7 +158,22 @@ async def callback_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── BUILD HTML ───────────────────────────────────────────────────────────────
 
+# ─── DISPLAY HELPERS ──────────────────────────────────────────────────────────
+
+KHMER_DIGITS = {'0':'០','1':'១','2':'២','3':'៣','4':'៤','5':'៥','6':'៦','7':'៧','8':'៨','9':'៩'}
+
+def format_round_display(round_num):
+    """Swiss rounds are sent as a plain number (e.g. '1') — show as 'ជុំទី១'.
+    Bracket stages (e.g. 'Semi-Final', '1/16') are already proper labels — leave as-is."""
+    s = str(round_num).strip()
+    if s.isdigit():
+        khmer_num = ''.join(KHMER_DIGITS.get(ch, ch) for ch in s)
+        return f'ជុំទី{khmer_num}'
+    return round_num
+
+
 def make_html(matches, round_num, time_start, event_name, play_type="", fmt="", division_label=""):
+    round_display = format_round_display(round_num)
     division_line = f'<div class="division-label">{division_label}</div>' if division_label else ""
     pages = ""
     for m in matches:
@@ -179,7 +194,7 @@ def make_html(matches, round_num, time_start, event_name, play_type="", fmt="", 
                     <td class="lbl">វិញ្ញាសារ</td>
                     <td class="val">{play_type}</td>
                     <td class="lbl">វគ្គ</td>
-                    <td class="val">{round_num}</td>
+                    <td class="val">{round_display}</td>
                 </tr>
                 <tr>
                     <td class="lbl">រូបមន្តប្រកួត</td>

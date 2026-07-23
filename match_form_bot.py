@@ -176,8 +176,8 @@ def make_html(matches, round_num, time_start, event_name, play_type="", fmt=""):
                 <tr>
                     <td class="lbl">វិញ្ញាសារ</td>
                     <td class="val">{play_type}</td>
-                    <td class="lbl">កាលបរិច្ឆេទ</td>
-                    <td class="val"></td>
+                    <td class="lbl">វគ្គ</td>
+                    <td class="val">{round_num}</td>
                 </tr>
                 <tr>
                     <td class="lbl">រូបមន្តប្រកួត</td>

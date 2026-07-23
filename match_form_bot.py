@@ -158,7 +158,8 @@ async def callback_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── BUILD HTML ───────────────────────────────────────────────────────────────
 
-def make_html(matches, round_num, time_start, event_name, play_type="", fmt=""):
+def make_html(matches, round_num, time_start, event_name, play_type="", fmt="", division_label=""):
+    division_line = f'<div class="division-label">{division_label}</div>' if division_label else ""
     pages = ""
     for m in matches:
         ends        = "".join([f"<th>{i}</th>" for i in range(1, 14)])
@@ -166,6 +167,7 @@ def make_html(matches, round_num, time_start, event_name, play_type="", fmt=""):
         pages += f"""
         <div class="page">
             <h2>{event_name}</h2>
+            {division_line}
             <table class="info">
                 <tr>
                     <td class="lbl">ព្រឹត្តការណ៍</td>
@@ -252,6 +254,7 @@ body {{ font-family: 'Battambang', sans-serif; background: white; }}
     overflow: hidden;
 }}
 h2 {{ text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 1mm; flex-shrink: 0; }}
+.division-label {{ text-align: center; font-size: 12pt; font-weight: bold; margin-bottom: 1mm; flex-shrink: 0; }}
 table {{ width: 100%; border-collapse: collapse; flex-shrink: 0; }}
 td, th {{ border: 1.2px solid black; padding: 1px 4px; vertical-align: middle; text-align: center; }}
 table.info td {{ height: 9mm; font-size: 11pt; }}
@@ -279,8 +282,8 @@ table.result td:nth-child(5) {{ width: 27%; font-weight: bold; font-size: 9pt; }
 
 # ─── GENERATE PDF VIA PLAYWRIGHT ─────────────────────────────────────────────
 
-async def generate_pdf_playwright(matches, round_num, time_start, event_name, play_type, fmt, output_path):
-    html_content = make_html(matches, round_num, time_start, event_name, play_type, fmt)
+async def generate_pdf_playwright(matches, round_num, time_start, event_name, play_type, fmt, output_path, division_label=""):
+    html_content = make_html(matches, round_num, time_start, event_name, play_type, fmt, division_label)
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page    = await browser.new_page()
@@ -298,7 +301,7 @@ async def generate_pdf_playwright(matches, round_num, time_start, event_name, pl
 
 # ─── AUTO MODE: called by the Cloud Function, skips Telegram upload/buttons ──
 
-async def send_match_forms_auto(matches, round_num, time_start, event_name):
+async def send_match_forms_auto(matches, round_num, time_start, event_name, division_label=""):
     """Build match forms with fixed Play Type/Format and send to every chat in CHAT_IDS."""
     play_type = "3 vs 3"
     fmt       = "Swiss-System"
@@ -333,7 +336,7 @@ async def send_match_forms_auto(matches, round_num, time_start, event_name):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "match_forms.pdf")
             await generate_pdf_playwright(
-                matches, round_num, time_start, event_name, play_type, fmt, output_path
+                matches, round_num, time_start, event_name, play_type, fmt, output_path, division_label
             )
             animation_task.cancel()
             for cid, msg in status_msgs.items():
@@ -433,6 +436,7 @@ def generate_round():
     data = request.get_json(force=True)
 
     round_num  = data.get("round_num", "?")
+    division_label = data.get("division_label", "")
     time_start = data.get("time_start", "--:--")
     event_name = data.get("event_name", "")
     matches    = data.get("matches", [])   # expects [{ "lane": "1", "team_a": "...", "team_b": "..." }, ...]
@@ -441,7 +445,7 @@ def generate_round():
         return jsonify({"ok": False, "error": "No matches provided"}), 400
 
     def run_async_task():
-        asyncio.run(send_match_forms_auto(matches, round_num, time_start, event_name))
+        asyncio.run(send_match_forms_auto(matches, round_num, time_start, event_name, division_label))
 
     threading.Thread(target=run_async_task).start()
     return jsonify({"ok": True, "message": "Generating and sending match forms..."})

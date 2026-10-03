@@ -318,7 +318,7 @@ async def generate_pdf_playwright(matches, round_num, time_start, event_name, pl
 
 async def send_match_forms_auto(matches, round_num, time_start, event_name, division_label=""):
     """Build match forms with fixed Play Type/Format and send to every chat in CHAT_IDS."""
-    play_type = "3 vs 3"
+    play_type = "2 vs 2"
     fmt       = "Swiss-System"
 
     bot = Bot(token=BOT_TOKEN)
